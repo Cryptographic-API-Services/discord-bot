@@ -24,7 +24,7 @@ export default class MessageCreateHandler {
           this.message.channelId,
           this.message.id,
         );
-        if (gotMessage.content.toLowerCase().includes("hey bot")) {
+        if (gotMessage.content.slice(0, 20).toLowerCase().includes("hey bot")) {
           await this.performHeyBotQuery(gotMessage);
         }
     } catch (error) {
