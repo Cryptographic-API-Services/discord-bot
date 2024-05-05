@@ -10,6 +10,7 @@ import { ChatOllama } from "npm:@langchain/community/chat_models/ollama";
 import { ChatPromptTemplate } from "npm:@langchain/core/prompts";
 import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { sendMessage } from "https://deno.land/x/discordeno@18.0.1/mod.ts";
+import { Bot } from "https://deno.land/x/discordeno@18.0.1/bot.ts";
 
 const bot = createBot({
   token: Deno.env.get("DISCORD_TOKEN"),
@@ -22,7 +23,7 @@ const bot = createBot({
 });
 
 // Another way to do events
-bot.events.messageCreate = async function (b, message) {
+bot.events.messageCreate = async function (b: Bot, message: Message) {
   const gotMessage: Message = await getMessage(
     b,
     message.channelId,
