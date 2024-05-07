@@ -28,7 +28,8 @@ export default class MessageCreateHandler {
           this.message.channelId,
           this.message.id,
         );
-        if (new MessageValidation(this.bot, gotMessage).isValid) {
+        const validation = new MessageValidation(this.bot, gotMessage);
+        if (validation.validateBlackList()) {
           const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
           if (sliceMessage.toLowerCase().includes("hey bot:")) {
             await this.performHeyBotQuery(gotMessage);
