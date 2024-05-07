@@ -29,7 +29,7 @@ export default class MessageCreateHandler {
           this.message.id,
         );
         const validation = new MessageValidation(this.bot, gotMessage);
-        if (validation.validateBlackList()) {
+        if (await validation.validateBlackList()) {
           const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
           if (sliceMessage.toLowerCase().includes("hey bot:")) {
             await this.performHeyBotQuery(gotMessage);
