@@ -55,7 +55,7 @@ export default class MessageCreateHandler {
         `You are my discord server bot. We offer a welcoming community for members to come and chat and talk all things tech and programming. You are to answer 
         questions to the best of your ability. You are provided with a list of documentation files for Cryptographic API Services in C# and TypeScript in the context.
         Answer the question to the best of your ability based on the code documentation in your context. Your response must be 2000 characters or less.
-        If you are unsure of an answer, please let the user know. 
+        If you are unsure of an answer, please let the user know. Your answers should be 2000 characters or less.
       
       <context>
       {context}
@@ -86,7 +86,7 @@ export default class MessageCreateHandler {
         [
           "system",
           `You are my discord server bot. We offer a welcoming community for members to come and chat and talk all things tech and programming. You are to answer 
-                    questions to the best of your ability. If you are unsure of an answer, please let the user know.`,
+                    questions to the best of your ability. If you are unsure of an answer, please let the user know. Your answers should be 2000 characters or less.`,
         ],
         ["user", "{input}"],
       ]);
