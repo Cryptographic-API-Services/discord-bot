@@ -10,6 +10,7 @@ import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
 import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
+import { MessageValidation } from "../validation/message-validation.ts";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -27,11 +28,13 @@ export default class MessageCreateHandler {
           this.message.channelId,
           this.message.id,
         );
-        const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
-        if (sliceMessage.toLowerCase().includes("hey bot:")) {
-          await this.performHeyBotQuery(gotMessage);
-        } else if (sliceMessage.toLowerCase().includes("documentation:")) {
-          await this.performDocumentationQuery(gotMessage);
+        if (new MessageValidation(this.bot, gotMessage).isValid) {
+          const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
+          if (sliceMessage.toLowerCase().includes("hey bot:")) {
+            await this.performHeyBotQuery(gotMessage);
+          } else if (sliceMessage.toLowerCase().includes("documentation:")) {
+            await this.performDocumentationQuery(gotMessage);
+          }
         }
     } catch (error) {
         console.error(error);
