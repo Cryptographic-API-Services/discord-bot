@@ -19,7 +19,7 @@ export class MessageValidation {
                 result = false;
                 await deleteMessage(this.bot, this.message.channelId, this.message.id, "You used some profanity we do not allow in the channel");
                 await sendMessage(this.bot, this.message.channelId, {
-                    content: this.message.tag + " you have used some profanity we do not allow in the channel. As such we have deleted your message.",
+                    content: `<@${this.message.authorId}>` + " you have used some profanity we do not allow in the channel. As such we have deleted your message.",
                   });
                   break;
             }
