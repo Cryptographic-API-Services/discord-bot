@@ -13,7 +13,6 @@ import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
 import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
-import { MessageValidation } from "../validation/message-validation.ts";
 import db from "../database/database.ts";
 import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
 
@@ -33,14 +32,11 @@ export default class MessageCreateHandler {
         this.message.channelId,
         this.message.id,
       );
-      const validation = new MessageValidation(this.bot, gotMessage);
-      if (await validation.validateBlackList()) {
-        const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
-        if (sliceMessage.toLowerCase().includes("hey bot:")) {
-          await this.performHeyBotQuery(gotMessage);
-        } else if (sliceMessage.toLowerCase().includes("documentation:")) {
-          await this.performDocumentationQuery(gotMessage);
-        }
+      const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
+      if (sliceMessage.toLowerCase().includes("hey bot:")) {
+        await this.performHeyBotQuery(gotMessage);
+      } else if (sliceMessage.toLowerCase().includes("documentation:")) {
+        await this.performDocumentationQuery(gotMessage);
       }
     } catch (error) {
       console.error(error);
@@ -127,12 +123,27 @@ export default class MessageCreateHandler {
     await db.queryArray`INSERT INTO public."ChatMessages"(
         "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
         VALUES (${llmResponse}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${1}, ${new Date()});`;
-    const sendMessageResponse = await sendMessage(
-      this.bot,
-      gotMessage.channelId,
-      {
-        content: `<@${gotMessage.authorId}> ` + llmResponse,
-      },
-    );
+    if (llmResponse.length > 1950) {
+      let newMessage = `<@${gotMessage.authorId}> `;
+      for (let i = 0; i < llmResponse.length; i += 1950) {
+        newMessage += llmResponse.slice(i, i + 1950);
+        await sendMessage(
+          this.bot,
+          gotMessage.channelId,
+          {
+            content: newMessage,
+          },
+        );
+        newMessage = "";
+      }
+    } else {
+      await sendMessage(
+        this.bot,
+        gotMessage.channelId,
+        {
+          content: `<@${gotMessage.authorId}> ` + llmResponse,
+        },
+      );
+    }
   }
 }
