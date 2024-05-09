@@ -5,12 +5,14 @@ import {
   sendMessage,
 } from "https://deno.land/x/discordeno@18.0.1/mod.ts";
 import { ChatOllama } from "npm:@langchain/community/chat_models/ollama";
-import { ChatPromptTemplate } from "npm:@langchain/core/prompts";
+import { ChatPromptTemplate, MessagesPlaceholder } from "npm:@langchain/core/prompts";
 import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
 import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
 import { MessageValidation } from "../validation/message-validation.ts";
+import db from "../database/database.ts";
+import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -90,16 +92,35 @@ export default class MessageCreateHandler {
         [
           "system",
           `You are my discord server bot. We offer a welcoming community for members to come and chat and talk all things tech and programming. You are to answer 
-                    questions to the best of your ability. If you are unsure of an answer, please let the user know. Your answers should be 2000 characters or less. 
-                    You are to use no profanity, racism etc`,
+          questions to the best of your ability. If you are unsure of an answer, please let the user know. Your answers should be 2000 characters or less. 
+          You are to use no profanity, racism etc`,
         ],
+        new MessagesPlaceholder("chatHistory"),
         ["user", "{input}"],
       ]);
-      const outputParser = new StringOutputParser();
-      const llmChain = prompt.pipe(chatModel).pipe(outputParser);
-      const llmResponse = await llmChain.invoke({
+      const contextualizeQChain = prompt.pipe(chatModel).pipe(
+        new StringOutputParser(),
+      );
+      const chatMessagesQuery = await db.queryArray(`SELECT "Content", "IsBot" FROM public."ChatMessages" WHERE "ChannelId" = ${gotMessage.channelId} AND "UserId" = ${gotMessage.authorId} ORDER BY "CreatedAt" DESC;`);
+      let chatHistory = [];
+      for (let i = 0; i < chatMessagesQuery.rows.length; i++) {
+        let currentRow = chatMessagesQuery.rows[i];
+        if (!currentRow[1]) {
+          chatHistory.push(new HumanMessage(currentRow[0]));
+        } else {
+          chatHistory.push(new AIMessage(currentRow[0]));
+        }
+      }
+      const llmResponse = await contextualizeQChain.invoke({
+        chatHistory: chatHistory,
         input: gotMessage.content,
       });
+      await db.queryArray`INSERT INTO public."ChatMessages"(
+        "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
+        VALUES (${llmResponse}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${1}, ${new Date()});`;
+        await db.queryArray`INSERT INTO public."ChatMessages"(
+          "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
+          VALUES (${gotMessage.content}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${0}, ${new Date()});`;
       const sendMessageResponse = await sendMessage(this.bot, gotMessage.channelId, {
         content: `<@${gotMessage.authorId}> ` + llmResponse,
       });
