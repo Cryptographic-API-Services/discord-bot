@@ -17,7 +17,8 @@ const bot = createBot({
 });
 
 bot.events.messageCreate = async function (b: Bot, message: Message) {
-  new MessageCreateHandler(b, message).handleMessage();
+  const handler = new MessageCreateHandler(b, message);
+  await handler.handleMessage();
 };
 
 await startBot(bot);
