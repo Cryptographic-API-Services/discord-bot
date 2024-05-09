@@ -6,4 +6,5 @@ We have a discord server for support located at the link above. This chatbot use
 
 ## How to Query Bot Commands Supported
 `Hey bot:` is a general query to prompt Llama3 with a question.
+
 `Documentation:` is a query against a vector store of our documentation.
