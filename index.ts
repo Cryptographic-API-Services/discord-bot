@@ -1,4 +1,5 @@
 import {
+  Bot,
   createBot,
   Intents,
   Message,

@@ -15,6 +15,7 @@ import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
 import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
 import { ChatMessageRepository } from "../repositories/chat-message-repository.ts";
+import { ReloadDocumentationCommand } from "./reload-documentation.command.ts";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -33,10 +34,12 @@ export default class MessageCreateHandler {
         this.message.id,
       );
       const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
-      if (sliceMessage.toLowerCase().includes("hey bot:")) {
+      if (sliceMessage.includes("hey bot:")) {
         await this.performHeyBotQuery(gotMessage);
-      } else if (sliceMessage.toLowerCase().includes("documentation:")) {
+      } else if (sliceMessage.includes("documentation:")) {
         await this.performDocumentationQuery(gotMessage);
+      } else if (sliceMessage.includes("replace docs:")) {
+        this.replaceDocumentation(gotMessage);
       }
     } catch (error) {
       console.error(error);
@@ -61,8 +64,8 @@ export default class MessageCreateHandler {
     const prompt = ChatPromptTemplate.fromTemplate(
       `You are my discord server bot. We offer a welcoming community for members to come and chat and talk all things tech and programming. You are to answer 
         questions to the best of your ability. You are provided with a list of documentation files for Cryptographic API Services in C# and TypeScript in the context.
-        Answer the question to the best of your ability based on the code documentation in your context. Your response must be 2000 characters or less.
-        If you are unsure of an answer, please let the user know. Your answers should be 2000 characters or less. You are to use no profanity, racism etc.
+        Answer the question to the best of your ability based on the code documentation in your context.
+        If you are unsure of an answer, please let the user know. You are to use no profanity, racism etc.
       
       <context>
       {context}
@@ -74,17 +77,20 @@ export default class MessageCreateHandler {
       llm: chatModel,
       prompt,
     });
-    const invokeResponse = await documentChain.invoke({
+    const llmResponse = await documentChain.invoke({
       input: gotMessage.content,
       context: documentSimilaritySearch,
     });
-    await sendMessage(this.bot, gotMessage.channelId, {
-      content: `<@${gotMessage.authorId}> ` + invokeResponse,
-    });
+    await this.sendLLMResponse(gotMessage, llmResponse);
   }
 
   private async performHeyBotQuery(gotMessage: Message): Promise<void> {
-    await ChatMessageRepository.insertChatMessage(gotMessage.content, gotMessage.authorId, gotMessage.channelId, false);
+    await ChatMessageRepository.insertChatMessage(
+      gotMessage.content,
+      gotMessage.authorId,
+      gotMessage.channelId,
+      false,
+    );
     const chatModel = new ChatOllama({
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
@@ -102,7 +108,11 @@ export default class MessageCreateHandler {
     const contextualizeQChain = prompt.pipe(chatModel).pipe(
       new StringOutputParser(),
     );
-    const chatMessagesQuery = await ChatMessageRepository.getChatMessagesByChannelIdAndUserId(gotMessage.channelId, gotMessage.authorId);
+    const chatMessagesQuery = await ChatMessageRepository
+      .getChatMessagesByChannelIdAndUserId(
+        gotMessage.channelId,
+        gotMessage.authorId,
+      );
     let chatHistory = [];
     for (let i = 0; i < chatMessagesQuery.rows.length; i++) {
       let currentRow = chatMessagesQuery.rows[i];
@@ -116,7 +126,16 @@ export default class MessageCreateHandler {
       chatHistory: chatHistory,
       input: gotMessage.content,
     });
-    await ChatMessageRepository.insertChatMessage(llmResponse, gotMessage.authorId, gotMessage.channelId, true);
+    await ChatMessageRepository.insertChatMessage(
+      llmResponse,
+      gotMessage.authorId,
+      gotMessage.channelId,
+      true,
+    );
+    await this.sendLLMResponse(gotMessage, llmResponse);
+  }
+
+  private async sendLLMResponse(gotMessage: Message, llmResponse: string) {
     if (llmResponse.length > 1950) {
       let newMessage = `<@${gotMessage.authorId}> `;
       for (let i = 0; i < llmResponse.length; i += 1950) {
@@ -139,5 +158,13 @@ export default class MessageCreateHandler {
         },
       );
     }
+  }
+
+  private async replaceDocumentation(gotMessage: Message): Promise<void> {
+    const reloadDocuments = new ReloadDocumentationCommand();
+    await reloadDocuments.initReloadingDocumentation();
+    await sendMessage(this.bot, gotMessage.channelId, {
+      content: `<@${gotMessage.authorId}> ` + `The Documentation has been repopulated in the vector store`,
+    });
   }
 }
