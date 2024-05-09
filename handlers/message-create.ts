@@ -84,7 +84,7 @@ export default class MessageCreateHandler {
   }
 
   private async performHeyBotQuery(gotMessage: Message): Promise<void> {
-    await ChatMessageRepository.insertChatMessage(gotMessage.content, gotMessage.authorId, gotMessage.channelId);
+    await ChatMessageRepository.insertChatMessage(gotMessage.content, gotMessage.authorId, gotMessage.channelId, false);
     const chatModel = new ChatOllama({
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
@@ -116,7 +116,7 @@ export default class MessageCreateHandler {
       chatHistory: chatHistory,
       input: gotMessage.content,
     });
-    await ChatMessageRepository.insertChatMessage(llmResponse, gotMessage.authorId, gotMessage.channelId);
+    await ChatMessageRepository.insertChatMessage(llmResponse, gotMessage.authorId, gotMessage.channelId, true);
     if (llmResponse.length > 1950) {
       let newMessage = `<@${gotMessage.authorId}> `;
       for (let i = 0; i < llmResponse.length; i += 1950) {
