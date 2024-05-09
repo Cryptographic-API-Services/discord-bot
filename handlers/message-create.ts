@@ -13,8 +13,8 @@ import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
 import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
-import db from "../database/database.ts";
 import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
+import { ChatMessageRepository } from "../repositories/chat-message-repository.ts";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -84,9 +84,7 @@ export default class MessageCreateHandler {
   }
 
   private async performHeyBotQuery(gotMessage: Message): Promise<void> {
-    await db.queryArray`INSERT INTO public."ChatMessages"(
-          "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
-          VALUES (${gotMessage.content}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${0}, ${new Date()});`;
+    await ChatMessageRepository.insertChatMessage(gotMessage.content, gotMessage.authorId, gotMessage.channelId);
     const chatModel = new ChatOllama({
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
@@ -104,9 +102,7 @@ export default class MessageCreateHandler {
     const contextualizeQChain = prompt.pipe(chatModel).pipe(
       new StringOutputParser(),
     );
-    const chatMessagesQuery = await db.queryArray(
-      `SELECT "Content", "IsBot" FROM public."ChatMessages" WHERE "ChannelId" = ${gotMessage.channelId} AND "UserId" = ${gotMessage.authorId} ORDER BY "CreatedAt" ASC;`,
-    );
+    const chatMessagesQuery = await ChatMessageRepository.getChatMessagesByChannelIdAndUserId(gotMessage.channelId, gotMessage.authorId);
     let chatHistory = [];
     for (let i = 0; i < chatMessagesQuery.rows.length; i++) {
       let currentRow = chatMessagesQuery.rows[i];
@@ -120,9 +116,7 @@ export default class MessageCreateHandler {
       chatHistory: chatHistory,
       input: gotMessage.content,
     });
-    await db.queryArray`INSERT INTO public."ChatMessages"(
-        "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
-        VALUES (${llmResponse}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${1}, ${new Date()});`;
+    await ChatMessageRepository.insertChatMessage(llmResponse, gotMessage.authorId, gotMessage.channelId);
     if (llmResponse.length > 1950) {
       let newMessage = `<@${gotMessage.authorId}> `;
       for (let i = 0; i < llmResponse.length; i += 1950) {

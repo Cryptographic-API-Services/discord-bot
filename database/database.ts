@@ -1,7 +1,11 @@
-import { Client } from "https://deno.land/x/postgres/mod.ts";
+import { Pool } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 
-let config = Deno.env.get("POSTGRES_URL");
-const db = new Client(config);
-await db.connect();
+const pool = new Pool({
+    database: Deno.env.get("POSTGRES_DATABASE"),
+    hostname: Deno.env.get("POSTGRES_HOST"),
+    port: 5432,
+    user: Deno.env.get("POSTGRES_USER"),
+    password: Deno.env.get("POSTGRES_PASSWORD")
+}, 10);
 
-export default db;
+export { pool };
