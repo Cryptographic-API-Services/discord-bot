@@ -88,6 +88,9 @@ export default class MessageCreateHandler {
   }
 
   private async performHeyBotQuery(gotMessage: Message): Promise<void> {
+    await db.queryArray`INSERT INTO public."ChatMessages"(
+          "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
+          VALUES (${gotMessage.content}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${0}, ${new Date()});`;
     const chatModel = new ChatOllama({
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
@@ -106,7 +109,7 @@ export default class MessageCreateHandler {
       new StringOutputParser(),
     );
     const chatMessagesQuery = await db.queryArray(
-      `SELECT "Content", "IsBot" FROM public."ChatMessages" WHERE "ChannelId" = ${gotMessage.channelId} AND "UserId" = ${gotMessage.authorId} ORDER BY "CreatedAt" DESC;`,
+      `SELECT "Content", "IsBot" FROM public."ChatMessages" WHERE "ChannelId" = ${gotMessage.channelId} AND "UserId" = ${gotMessage.authorId} ORDER BY "CreatedAt" ASC;`,
     );
     let chatHistory = [];
     for (let i = 0; i < chatMessagesQuery.rows.length; i++) {
@@ -124,9 +127,6 @@ export default class MessageCreateHandler {
     await db.queryArray`INSERT INTO public."ChatMessages"(
         "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
         VALUES (${llmResponse}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${1}, ${new Date()});`;
-    await db.queryArray`INSERT INTO public."ChatMessages"(
-          "Content", "UserId", "ChannelId", "IsBot", "CreatedAt")
-          VALUES (${gotMessage.content}, ${gotMessage.authorId}, ${gotMessage.channelId}, ${0}, ${new Date()});`;
     const sendMessageResponse = await sendMessage(
       this.bot,
       gotMessage.channelId,
