@@ -162,6 +162,9 @@ export default class MessageCreateHandler {
 
   private async replaceDocumentation(gotMessage: Message): Promise<void> {
     const reloadDocuments = new ReloadDocumentationCommand();
+    await sendMessage(this.bot, gotMessage.channelId, {
+      content: `<@${gotMessage.authorId}> ` + `The documentation is being replaced in the vector store. This may take a few minutes.`,
+    });
     await reloadDocuments.initReloadingDocumentation();
     await sendMessage(this.bot, gotMessage.channelId, {
       content: `<@${gotMessage.authorId}> ` + `The Documentation has been repopulated in the vector store`,
