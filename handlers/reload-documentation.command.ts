@@ -20,21 +20,27 @@ export class ReloadDocumentationCommand {
   private async getCSharpDocumentation(
     embeddings: OllamaEmbeddings,
   ): Promise<void> {
-    const nonParallelDocumentationLoader = new CheerioWebBaseLoader(
-      "https://raw.githubusercontent.com/Cryptographic-API-Services/cas-dotnet-sdk/main/docs/EXAMPLES.md",
+    const cSharpNonParllelDocs = new CheerioWebBaseLoader(
+      "https://raw.githubusercontent.com/Cryptographic-API-Services/cas-dotnet-sdk/main/docs/EXAMPLES.md"
     );
-    const parallelDocumentationLoader = new CheerioWebBaseLoader(
+    const cSharpParllelDocs = new CheerioWebBaseLoader(
         "https://raw.githubusercontent.com/Cryptographic-API-Services/cas-dotnet-sdk/main/docs/PARALLEL.md"
     );
+    const typeScriptNonParllelDocs = new CheerioWebBaseLoader(
+      "https://raw.githubusercontent.com/Cryptographic-API-Services/cas-typescript-sdk/main/docs/EXAMPLES.md"
+    );
     const splitter = new RecursiveCharacterTextSplitter();
-    const nonParallelDocumentationDocs = await nonParallelDocumentationLoader.load();
+    const nonParallelDocumentationDocs = await cSharpNonParllelDocs.load();
     const nonParallelDocumentationSplitDocs = await splitter.splitDocuments(nonParallelDocumentationDocs);
     const vectorStore = await NeonPostgres.initialize(embeddings, {
       connectionString: Deno.env.get("POSTGRES_URL") as string,
     });
     await vectorStore.addDocuments(nonParallelDocumentationSplitDocs);
-    const parallelDocumentationDocs = await parallelDocumentationLoader.load();
+    const parallelDocumentationDocs = await cSharpParllelDocs.load();
     const parallelDocumentationSplitDocs = await splitter.splitDocuments(parallelDocumentationDocs);
     await vectorStore.addDocuments(parallelDocumentationSplitDocs);
+    const typeScriptNonParallelDocumentationDocs = await typeScriptNonParllelDocs.load();
+    const typeScriptNonParallelDocumentationSplitDocs = await splitter.splitDocuments(typeScriptNonParallelDocumentationDocs);
+    await vectorStore.addDocuments(typeScriptNonParallelDocumentationSplitDocs);
   }
 }
