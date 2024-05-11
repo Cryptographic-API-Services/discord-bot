@@ -18,8 +18,12 @@ const bot = createBot({
 });
 
 bot.events.messageCreate = async function (b: Bot, message: Message) {
-  const handler = new MessageCreateHandler(b, message);
-  await handler.handleMessage();
+  try {
+    const handler = new MessageCreateHandler(b, message);
+    await handler.handleMessage();
+  } catch(error) {
+    console.error(error);
+  }
 };
 
 await startBot(bot);
