@@ -11,11 +11,12 @@ import {
 } from "npm:@langchain/core/prompts";
 import { StringOutputParser } from "npm:@langchain/core/output_parsers";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
-import { NeonPostgres } from "npm:@langchain/community/vectorstores/neon";
 import { createStuffDocumentsChain } from "npm:langchain/chains/combine_documents";
 import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
 import { ChatMessageRepository } from "../repositories/chat-message-repository.ts";
 import { ReloadDocumentationCommand } from "./reload-documentation.command.ts";
+import { PoolConfig } from "npm:pg";
+import { DistanceStrategy, PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -55,10 +56,30 @@ export default class MessageCreateHandler {
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
     });
-    const vectorStore = await NeonPostgres.initialize(embeddings, {
-      connectionString: Deno.env.get("POSTGRES_URL") as string,
-    });
-    const documentSimilaritySearch = await vectorStore.similaritySearch(
+    const config = {
+      postgresConnectionOptions: {
+        type: "postgres",
+        host: Deno.env.get("POSTGRES_HOST"),
+        port: 5432,
+        user: Deno.env.get("POSTGRES_USER"),
+        password: Deno.env.get("POSTGRES_PASSWORD"),
+        database: Deno.env.get("POSTGRES_DATABASE"),
+      } as PoolConfig,
+      tableName: "testlangchain",
+      columns: {
+        idColumnName: "id",
+        vectorColumnName: "vector",
+        contentColumnName: "content",
+        metadataColumnName: "metadata",
+      },
+      // supported distance strategies: cosine (default), innerProduct, or euclidean
+      distanceStrategy: "cosine" as DistanceStrategy,
+    };
+    const pgvectorStore = await PGVectorStore.initialize(
+      embeddings,
+      config
+    );
+    const documentSimilaritySearch = await pgvectorStore.similaritySearch(
       gotMessage.content,
     );
     const prompt = ChatPromptTemplate.fromTemplate(
