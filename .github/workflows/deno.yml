@@ -11,11 +11,9 @@ name: Deno
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
