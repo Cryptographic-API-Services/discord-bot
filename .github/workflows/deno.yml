@@ -21,12 +21,8 @@ jobs:
   test:
     runs-on: self-hosted
 
-    steps:
-      - name: Stop PM2
-      - run: pm2 stop chatbot
-      
+    steps:      
       - name: Setup repo
         uses: actions/checkout@v4
-
-      - name: Start PM2
-      - run: pm2 start chatbot
+      - run: pm2 stop chatbot
+      - run: pm2 stop chatbot
