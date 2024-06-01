@@ -15,8 +15,8 @@ import { createStuffDocumentsChain } from "npm:langchain/chains/combine_document
 import { AIMessage, HumanMessage } from "npm:@langchain/core/messages";
 import { ChatMessageRepository } from "../repositories/chat-message-repository.ts";
 import { ReloadDocumentationCommand } from "./reload-documentation.command.ts";
-import { PoolConfig } from "npm:pg";
-import { DistanceStrategy, PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
+import { PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
+import { DocumentationVectorStoreRepository } from "../repositories/documentation-vector-store-repository.ts";
 
 export default class MessageCreateHandler {
   bot: Bot;
@@ -56,25 +56,7 @@ export default class MessageCreateHandler {
       baseUrl: Deno.env.get("OLLAMA_URL"),
       model: Deno.env.get("LLM"),
     });
-    const config = {
-      postgresConnectionOptions: {
-        type: "postgres",
-        host: Deno.env.get("POSTGRES_HOST"),
-        port: 5432,
-        user: Deno.env.get("POSTGRES_USER"),
-        password: Deno.env.get("POSTGRES_PASSWORD"),
-        database: Deno.env.get("POSTGRES_DATABASE"),
-      } as PoolConfig,
-      tableName: "testlangchain",
-      columns: {
-        idColumnName: "id",
-        vectorColumnName: "vector",
-        contentColumnName: "content",
-        metadataColumnName: "metadata",
-      },
-      // supported distance strategies: cosine (default), innerProduct, or euclidean
-      distanceStrategy: "cosine" as DistanceStrategy,
-    };
+    const config = DocumentationVectorStoreRepository.getPgConnectionForVectorStore();
     const pgvectorStore = await PGVectorStore.initialize(
       embeddings,
       config

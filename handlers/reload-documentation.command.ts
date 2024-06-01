@@ -1,8 +1,7 @@
 import { DocumentationVectorStoreRepository } from "../repositories/documentation-vector-store-repository.ts";
 import { CheerioWebBaseLoader } from "npm:langchain/document_loaders/web/cheerio";
 import { RecursiveCharacterTextSplitter } from "npm:langchain/text_splitter";
-import { PoolConfig } from "npm:pg";
-import { DistanceStrategy, PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
+import { PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
 import { OllamaEmbeddings } from "npm:@langchain/community/embeddings/ollama";
 
 export class ReloadDocumentationCommand {
@@ -30,25 +29,7 @@ export class ReloadDocumentationCommand {
     const splitter = new RecursiveCharacterTextSplitter();
     const nonParallelDocumentationDocs = await cSharpNonParllelDocs.load();
     const nonParallelDocumentationSplitDocs = await splitter.splitDocuments(nonParallelDocumentationDocs);
-    const config = {
-      postgresConnectionOptions: {
-        type: "postgres",
-        host: Deno.env.get("POSTGRES_HOST"),
-        port: 5432,
-        user: Deno.env.get("POSTGRES_USER"),
-        password: Deno.env.get("POSTGRES_PASSWORD"),
-        database: Deno.env.get("POSTGRES_DATABASE"),
-      } as PoolConfig,
-      tableName: "testlangchain",
-      columns: {
-        idColumnName: "id",
-        vectorColumnName: "vector",
-        contentColumnName: "content",
-        metadataColumnName: "metadata",
-      },
-      // supported distance strategies: cosine (default), innerProduct, or euclidean
-      distanceStrategy: "cosine" as DistanceStrategy,
-    };
+    const config = DocumentationVectorStoreRepository.getPgConnectionForVectorStore();
       const pgvectorStore = await PGVectorStore.initialize(
         embeddings,
         config
