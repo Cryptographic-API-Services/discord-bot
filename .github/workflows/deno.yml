@@ -21,7 +21,6 @@ jobs:
 
     steps:      
       - name: Setup repo
-        uses: actions/checkout@v4
       - run: git pull
       - run: pm2 stop chatbot
       - run: pm2 stop chatbot
