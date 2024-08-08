@@ -17,14 +17,17 @@ import { ChatMessageRepository } from "../repositories/chat-message-repository.t
 import { ReloadDocumentationCommand } from "./reload-documentation.command.ts";
 import { PGVectorStore } from "npm:@langchain/community/vectorstores/pgvector";
 import { DocumentationVectorStoreRepository } from "../repositories/documentation-vector-store-repository.ts";
+import { MessageRateLimiter } from "./message-rate-limiter.ts";
 
 export default class MessageCreateHandler {
   bot: Bot;
   message: Message;
+  rateLimiter: MessageRateLimiter;
 
-  constructor(bot: Bot, message: Message) {
+  constructor(bot: Bot, message: Message, rateLimiter: MessageRateLimiter) {
     this.bot = bot;
     this.message = message;
+    this.rateLimiter = rateLimiter;
   }
 
   public async handleMessage(): Promise<void> {
@@ -34,13 +37,17 @@ export default class MessageCreateHandler {
         this.message.channelId,
         this.message.id,
       );
-      const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
-      if (sliceMessage.includes("hey bot:")) {
-        await this.performHeyBotQuery(gotMessage);
-      } else if (sliceMessage.includes("documentation:")) {
-        await this.performDocumentationQuery(gotMessage);
-      } else if (sliceMessage.includes("replace docs:")) {
-        this.replaceDocumentation(gotMessage);
+      if (!gotMessage.isFromBot && this.rateLimiter.checkRateLimitForUser(gotMessage.authorId)) {
+        await sendMessage(this.bot, gotMessage.channelId, {content: `<@${gotMessage.authorId}> ` + `You have messaged the bot to many times in the last thirty seconds, please wait.`});
+      } else {
+        const sliceMessage = gotMessage.content.slice(0, 20).toLowerCase();
+        if (sliceMessage.includes("hey bot:")) {
+          await this.performHeyBotQuery(gotMessage);
+        } else if (sliceMessage.includes("documentation:")) {
+          await this.performDocumentationQuery(gotMessage);
+        } else if (sliceMessage.includes("replace docs:")) {
+          this.replaceDocumentation(gotMessage);
+        }
       }
     } catch (error) {
       console.error(error);
